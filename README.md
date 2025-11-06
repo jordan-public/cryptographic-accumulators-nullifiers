@@ -71,7 +71,7 @@ For a fixed key domain (e.g., $2^{256}$), define a full binary tree of depth $d$
 
 **Membership proof** for $e$ is the path of sibling hashes from leaf to root:
 $$
-\pi_e={h_0,\dots,h_{d-1}},\quad \text{size } O(\log |\mathcal{U}|).
+\pi_e=\{h_0,\dots,h_{d-1}\},\quad \text{size } O(\log |\mathcal{U}|).
 $$
 
 **Non-membership** in *sparse* trees uses the canonical $\bot$ leaf: the proof shows the path leads to the default leaf at index $\mathsf{H}(e)$.
@@ -120,19 +120,19 @@ $$
 
 For $e\in S$, a membership witness is
 $$
-\mathsf{w}*e = g^{\prod*{x\in S\setminus{e}} (s+x)}.
+\mathsf{w}_e = g^{\prod_{x\in S\setminus\{e\}} (s+x)}.
 $$
 
 **Verification** uses one pairing:
 $$
-e(\mathsf{w}_e,, g^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S),, g).
+ e(\mathsf{w}_e, g^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S), g).
 $$
 
 ### Updates
 
 Appending $y$ should transform
 $$
-\mathsf{Acc}(S\cup{y}) = \mathsf{Acc}(S)^{(s+y)}.
+\mathsf{Acc}(S\cup\{y\}) = \mathsf{Acc}(S)^{(s+y)}.
 $$
 But exponent $(s+y)$ is *unknown* publicly; thus:
 
@@ -192,7 +192,7 @@ $$
 $$
 **Verify** with one pairing:
 $$
-e(\mathsf{w}_e,, g^{\tau - e}) \stackrel{?}{=} e(C,, g).
+ e(\mathsf{w}_e, g^{\tau - e}) \stackrel{?}{=} e(C, g).
 $$
 
 ### Non-membership witness (Bézout relation)
@@ -207,12 +207,12 @@ W_u = g^{u(\tau)}, \quad W_v = g^{v(\tau)}.
 $$
 **Verify**:
 $$
-e(W_u,, C)\cdot e(W_v,, g^{\tau - y}) \stackrel{?}{=} e(g,, g).
+ e(W_u, C)\cdot e(W_v, g^{\tau - y}) \stackrel{?}{=} e(g, g).
 $$
 
 ### Updates
 
-Appending $y$ changes $f_{S\cup{y}}(x)=f_S(x)(x-y)$ and
+Appending $y$ changes $f_{S\cup\{y\}}(x)=f_S(x)(x-y)$ and
 $$
 C' = g^{f_S(\tau)(\tau-y)}.
 $$
@@ -298,8 +298,14 @@ $$
 * **Witness size:** $O(1)$ (one or two $\bmod N$ elements).
 * **Append & witness updates:** $O(1)$ modular exponentiations *publicly*.
 * **Verifier:** one modular exponent for membership; a couple for non-membership.
-* **Trust:** strong RSA/unknown-order assumption; need sound hash-to-prime.
+* **Trust:** strong RSA/unknown-order assumption; classic variant needs sound hash-to-prime, while the Kemmoe–Lysyanskaya variant avoids hashing to primes.
 * **On-chain:** uses `modexp` precompile; gas is materially higher than BN254 pairing, but append & client updates are superb off chain.
+
+### Variant: no hash-to-prime (Kemmoe–Lysyanskaya, 2024)
+
+Kemmoe and Lysyanskaya (CCS 2024; IACR ePrint 2024/505) give an RSA-based **dynamic universal** accumulator that **does not require mapping elements to primes**. Elements can be accumulated in their native representation, while retaining constant-size witnesses and efficient verification in the unknown-order group. This removes the hash-to-prime step (and its engineering overhead) yet keeps **public append** semantics characteristic of RSA accumulators.
+
+*EVM note:* Verification still uses modular exponentiation via the `modexp` precompile. On-chain costs are comparable to classic RSA accumulators (pairing-based schemes are typically cheaper to verify on BN254 but lack public-update UX). The main benefit here is **eliminating hash-to-prime** in the client stack.
 
 ---
 
@@ -340,31 +346,41 @@ $$
 
 For sibling list $\pi_e=(s_0,\dots,s_{d-1})$ and bit-decomposition of $i=\mathsf{H}(e)$, define
 $$
-h_0 = \mathsf{H}(\textsf{leaf}(e)),\quad
-h_{k+1}=\begin{cases}
-\mathsf{H}(h_k | s_k) & \text{if } i_k=0\
-\mathsf{H}(s_k | h_k) & \text{if } i_k=1
-\end{cases}
+ h_0 = \mathsf{H}(\textsf{leaf}(e)),\quad
+ h_{k+1}=\begin{cases}
+  \mathsf{H}(h_k \| s_k) & \text{if } i_k=0 \\
+  \mathsf{H}(s_k \| h_k) & \text{if } i_k=1
+ \end{cases}
 $$
 Accept if $h_d=R$.
 
 ### Pairing-based membership check
 
 $$
-e(\mathsf{w}_e,, g^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S),, g).
+ e(\mathsf{w}_e, g^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S), g).
 $$
 
 ### KZG membership & non-membership
 
 Membership:
 $$
-e!\left(g^{q_e(\tau)},, g^{\tau-e}\right) \stackrel{?}{=} e!\left(g^{f_S(\tau)},, g\right).
+ e\!\left(g^{q_e(\tau)}, g^{\tau-e}\right) \stackrel{?}{=} e\!\left(g^{f_S(\tau)}, g\right).
 $$
 
 Non-membership (Bézout):
 $$
-e!\left(g^{u(\tau)},, g^{f_S(\tau)}\right)\cdot e!\left(g^{v(\tau)},, g^{\tau-y}\right) \stackrel{?}{=} e(g,g).
+ e\!\left(g^{u(\tau)}, g^{f_S(\tau)}\right)\cdot e\!\left(g^{v(\tau)}, g^{\tau-y}\right) \stackrel{?}{=} e(g,g).
 $$
+## References
+
+1. R. C. Merkle. *A Digital Signature Based on a Conventional Encryption Function*. CRYPTO 1987.
+2. J. Benaloh and M. de Mare. *One-Way Accumulators: A Decentralized Alternative to Digital Signatures*. EUROCRYPT 1993.
+3. J. Camenisch and A. Lysyanskaya. *Dynamic Accumulators and Application to Efficient Revocation of Anonymous Credentials*. CRYPTO 2002.
+4. L. Nguyen. *Accumulators from Bilinear Pairings and Applications*. CT-RSA 2005.
+5. A. Kate, G. Zaverucha, I. Goldberg. *Constant-Size Commitments to Polynomials and Their Applications*. ASIACRYPT 2010. (KZG)
+6. A. Bünz, S. Eskandarian, D. Boneh. *Proofs of Liabilities/Reserves* and related set-accumulator techniques (2018–2019 notes/surveys).
+7. V. Y. Kemmoe and A. Lysyanskaya. *RSA-Based Dynamic Accumulator without Hashing into Primes*. CCS 2024; IACR ePrint 2024/505.
+
 
 ### RSA membership & non-membership
 
