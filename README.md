@@ -116,16 +116,19 @@ Pick secret $s\in\mathbb{F}_p$; publish $(g, g^s)$ (and often $g^{s^i}$ for boun
 ### Accumulator and witnesses
 
 Define
+
 $$
 \mathsf{Acc}(S)=g^{\prod_{x\in S} (s+x)}.
 $$
 
 For $e\in S$, a membership witness is
+
 $$
 \mathsf{w}_e = g^{\prod_{x\in S\setminus\{e\}} (s+x)}.
 $$
 
 **Verification** uses one pairing:
+
 $$
  e(\mathsf{w}_e, g^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S), g).
 $$
@@ -133,9 +136,11 @@ $$
 ### Updates
 
 Appending $y$ should transform
+
 $$
 \mathsf{Acc}(S\cup\{y\}) = \mathsf{Acc}(S)^{(s+y)}.
 $$
+
 But exponent $(s+y)$ is *unknown* publicly; thus:
 
 * Without trapdoor access or extra update keys, **public updates are not possible from $\mathsf{Acc}(S)$ alone.**
@@ -167,6 +172,7 @@ Use the characteristic polynomial of $S$ with a KZG commitment.
 ### Setup
 
 Structured Reference String (SRS) for degree $\ge |S|$:
+
 $$
 \mathsf{SRS}=\big(g, g^\tau, g^{\tau^2},\ldots\big).
 $$
@@ -174,10 +180,13 @@ $$
 ### Accumulator
 
 Characteristic polynomial
+
 $$
 f_S(x)=\prod_{e\in S} (x-e).
 $$
+
 Commitment
+
 $$
 \mathsf{Acc}(S)=C=g^{f_S(\tau)}.
 $$
@@ -185,14 +194,19 @@ $$
 ### Membership witness
 
 For $e\in S$ define the quotient
+
 $$
 q_e(x)=\frac{f_S(x)}{x-e}.
 $$
+
 Witness
+
 $$
 \mathsf{w}_e = g^{q_e(\tau)}.
 $$
+
 **Verify** with one pairing:
+
 $$
  e(\mathsf{w}_e, g^{\tau - e}) \stackrel{?}{=} e(C, g).
 $$
@@ -200,14 +214,19 @@ $$
 ### Non-membership witness (Bézout relation)
 
 For $y\notin S$, find polynomials $u(x),v(x)$ with
+
 $$
 u(x)\cdot f_S(x) + v(x)\cdot (x-y) = 1.
 $$
+
 Publish
+
 $$
 W_u = g^{u(\tau)}, \quad W_v = g^{v(\tau)}.
 $$
+
 **Verify**:
+
 $$
  e(W_u, C)\cdot e(W_v, g^{\tau - y}) \stackrel{?}{=} e(g, g).
 $$
@@ -215,9 +234,11 @@ $$
 ### Updates
 
 Appending $y$ changes $f_{S\cup\{y\}}(x)=f_S(x)(x-y)$ and
+
 $$
 C' = g^{f_S(\tau)(\tau-y)}.
 $$
+
 **Publicly deriving $C'$ from $C$ is *not* possible** without extra SRS material enabling multiplication by $(\tau-y)$. In practice:
 
 * The *aggregator* recomputes $C'$ from coefficients (linear in $\deg f$) or maintains a product tree to keep it quasi-linear.
@@ -254,13 +275,17 @@ Verkle trees combine **high-arity trees** with **KZG vector commitments** at eac
 For key $e$, let the path indices be $(i_0, i_1,\dots, i_{h-1})$ where $h=\lceil\log_b |\mathcal{U}|\rceil$. The proof provides, for each depth $k$:
 - the node commitment $C_k$ and the opened value $V^{(k)}_{i_k}$ (which is the child pointer for the next level, or the leaf value at the last level), and
 - a KZG evaluation witness
+
 $$
 W_k = g^{\frac{f_k(\tau)-V^{(k)}_{i_k}}{\tau - i_k}}.
 $$
+
 The verifier checks for each level
+
 $$
  e(W_k,\; g^{\tau - i_k}) \stackrel{?}{=} e\!\Big(C_k / g^{V^{(k)}_{i_k}},\; g\Big),
 $$
+
 then continues with the child commitment revealed by $V^{(k)}_{i_k}$. At the leaf, it checks that the value equals $1$ (present).
 
 ### Non-membership proof
@@ -270,9 +295,11 @@ A non-membership proof shows that along the path, at some level $k$, the opened 
 ### Updates
 
 Appending a new nullifier $y$ updates the leaf at index $i=\mathsf{H}(y)$ and the $h$ ancestor nodes on the path. For each affected node, recompute its vector entry and KZG commitment:
+
 $$
 C'_k = g^{f'_k(\tau)}\quad \text{with}\quad f'_k(i_k)=V'^{(k)}_{i_k},\; f'_k(j)=f_k(j)\; \forall j\neq i_k.
 $$
+
 This is **$O(h)$** work; no trapdoor is required. As with Merkle trees, previously cached proofs that traverse any changed node become stale and must be refreshed.
 
 ### Prover state & maintenance
@@ -312,14 +339,19 @@ Accumulate primes in an unknown-order group; supports elegant public updates.
 ### Accumulator and membership
 
 Let $X=\prod_{e\in S}\mathsf{Hp}(e)$. Define
+
 $$
 \mathsf{Acc}(S)=A=g^X \bmod N.
 $$
+
 Membership witness for $e\in S$:
+
 $$
 \mathsf{w}_e = g^{X/\mathsf{Hp}(e)} \bmod N.
 $$
+
 **Verify** with one modexp:
+
 $$
 \mathsf{w}_e^{\mathsf{Hp}(e)} \stackrel{?}{\equiv} A \pmod N.
 $$
@@ -327,27 +359,36 @@ $$
 ### Public append (key advantage)
 
 Append $y$ with prime $p_y=\mathsf{Hp}(y)$:
+
 $$
 A' = A^{p_y} \pmod N.
 $$
+
 Existing witnesses *publicly update* as
+
 $$
 \mathsf{w}_e' = \mathsf{w}_e^{p_y} \pmod N,\quad
 \text{and } \mathsf{w}_y = A.
 $$
+
 No trapdoor required; everyone can update locally.
 
 ### Non-membership (universal accumulator)
 
 Let $p=\mathsf{Hp}(y)$ and $X=\prod_{e\in S}\mathsf{Hp}(e)$ (note $\gcd(p,X)=1$ if $y\notin S$). Find integers $(a,b)$ s.t.
+
 $$
 a\cdot p + b\cdot X = 1.
 $$
+
 Set
+
 $$
 d = g^a \bmod N,\quad \text{witness } (d,b).
 $$
+
 **Verify**:
+
 $$
 d^{p}\cdot A^{b} \stackrel{?}{\equiv} g \pmod N.
 $$
@@ -411,6 +452,7 @@ Kemmoe and Lysyanskaya (CCS 2024; IACR ePrint 2024/505) give an RSA-based **dyna
 ### Sparse Merkle verification
 
 For sibling list $\pi_e=(s_0,\dots,s_{d-1})$ and bit-decomposition of $i=\mathsf{H}(e)$, define
+
 $$
  h_0 = \mathsf{H}(\textsf{leaf}(e)),\quad
  h_{k+1}=\begin{cases}
@@ -418,6 +460,7 @@ $$
   \mathsf{H}(s_k \| h_k) & \text{if } i_k=1
  \end{cases}
 $$
+
 Accept if $h_d=R$.
 
 ### Pairing-based membership check
@@ -429,11 +472,13 @@ $$
 ### KZG membership & non-membership
 
 Membership:
+
 $$
  e\!\left(g^{q_e(\tau)}, g^{\tau-e}\right) \stackrel{?}{=} e\!\left(g^{f_S(\tau)}, g\right).
 $$
 
 Non-membership (Bézout):
+
 $$
  e\!\left(g^{u(\tau)}, g^{f_S(\tau)}\right)\cdot e\!\left(g^{v(\tau)}, g^{\tau-y}\right) \stackrel{?}{=} e(g,g).
 $$
@@ -441,11 +486,13 @@ $$
 ### RSA membership & non-membership
 
 Membership:
+
 $$
 \left(\mathsf{w}_e\right)^{\mathsf{Hp}(e)} \stackrel{?}{\equiv} \mathsf{Acc}(S) \pmod N.
 $$
 
 Non-membership:
+
 $$
 d^{\mathsf{Hp}(y)}\cdot \mathsf{Acc}(S)^{b} \stackrel{?}{\equiv} g \pmod N
 \quad\text{where } a\cdot \mathsf{Hp}(y)+b\cdot X=1,\ d=g^a.
