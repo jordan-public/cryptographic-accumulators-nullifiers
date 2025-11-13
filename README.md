@@ -54,7 +54,8 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 1. **(Sparse) Merkle Trees (SMT)**
 2. **Pairing-based (Nguyen/Boneh–Boyen-style)**
 3. **KZG-based (polynomial-commitment set accumulators)**
-4. **RSA-based (Benaloh–de Mare / Camenisch–Lysyanskaya-style)**
+4. **Verkle Trees (KZG vector-commitment trees)**
+5. **RSA-based (Benaloh–de Mare / Camenisch–Lysyanskaya-style)**
 
 Each chapter details math, witness maintenance, (non)membership, and complexity.
 
@@ -236,7 +237,69 @@ $$
 
 ---
 
-## 4. RSA-based accumulators (unknown-order groups)
+## 4. Verkle Trees as Accumulators (KZG vector-commitment trees)
+
+Verkle trees combine **high-arity trees** with **KZG vector commitments** at each internal node. They act as accumulators with **logarithmic-size** proofs (in the tree height) and KZG-style verification at each level. This makes them a middle ground between SMTs (hash-based, longer proofs) and constant-size KZG set accumulators (short proofs, but require a witness update service).
+
+### Construction
+
+- Choose a branching factor $b$ (e.g., $b=256$). Each internal node holds a vector $V\in \mathbb{F}_p^{b}$ of its children’s digests (child commitments or values).
+- Interpolate the unique polynomial $f\in \mathbb{F}_p[x]$ with $\deg f<b$ such that $f(i)=V_i$ for indices $i\in\{0,\dots,b-1\}$.
+- Commit to the node using KZG: $C= g^{f(\tau)}$. The root commitment is stored on chain.
+- Leaves store application values. For nullifiers, a leaf at index $i=\mathsf{H}(e)$ holds a presence bit (e.g., $1$).
+
+### Membership proof
+
+For key $e$, let the path indices be $(i_0, i_1,\dots, i_{h-1})$ where $h=\lceil\log_b |\mathcal{U}|\rceil$. The proof provides, for each depth $k$:
+- the node commitment $C_k$ and the opened value $V^{(k)}_{i_k}$ (which is the child pointer for the next level, or the leaf value at the last level), and
+- a KZG evaluation witness
+$$
+W_k = g^{\frac{f_k(\tau)-V^{(k)}_{i_k}}{\tau - i_k}}.
+$$
+The verifier checks for each level
+$$
+ e(W_k,\; g^{\tau - i_k}) \stackrel{?}{=} e\!\Big(C_k / g^{V^{(k)}_{i_k}},\; g\Big),
+$$
+then continues with the child commitment revealed by $V^{(k)}_{i_k}$. At the leaf, it checks that the value equals $1$ (present).
+
+### Non-membership proof
+
+A non-membership proof shows that along the path, at some level $k$, the opened entry is the **default** (empty) value, e.g., $V^{(k)}_{i_k}=0$, using the same KZG opening equation as above; or that the leaf value equals $0$ (absent). Thus non-membership is natively supported via openings to default entries.
+
+### Updates
+
+Appending a new nullifier $y$ updates the leaf at index $i=\mathsf{H}(y)$ and the $h$ ancestor nodes on the path. For each affected node, recompute its vector entry and KZG commitment:
+$$
+C'_k = g^{f'_k(\tau)}\quad \text{with}\quad f'_k(i_k)=V'^{(k)}_{i_k},\; f'_k(j)=f_k(j)\; \forall j\neq i_k.
+$$
+This is **$O(h)$** work; no trapdoor is required. As with Merkle trees, previously cached proofs that traverse any changed node become stale and must be refreshed.
+
+### Prover state & maintenance
+
+- **Prover keeps:** optionally the last path proof; otherwise can recompute from the current tree. 
+- **On append:** witnesses touching the updated path become stale; update cost is $O(h)$ (one node per level). No centralized witness-issuer is required.
+
+### (Non)membership & verification
+
+- **Membership:** $h$ KZG evaluation checks (one per level). 
+- **Non-membership:** same structure, proving openings to default values.
+
+### Complexity
+
+- **Witness size:** $O(h)$ openings (each constant-size KZG proof), where $h=\lceil\log_b |\mathcal{U}|\rceil$.
+- **Prover:** $O(h)$ to build a path proof; interpolation can be precomputed or done via fixed-domain Lagrange bases.
+- **Verifier:** $O(h)$ pairings (often 1 per opening). Batch/multi-openings can reduce constants.
+- **Trust:** requires a KZG SRS; same assumptions as KZG.
+- **On-chain:** verification cost scales with $h$ pairings; with large $b$ (e.g., $256$), $h$ is small relative to a binary Merkle tree, but still larger than constant-size KZG set accumulators.
+
+### EVM notes
+
+- Uses BN254 pairing precompile; proof size and gas grow with tree height.
+- Proofs are **shorter than SMT** (because $h$ is smaller) and do **not** require a witness update service, but they are **longer/heavier** to verify than constant-size KZG or pairing-based set accumulators.
+
+---
+
+## 5. RSA-based accumulators (unknown-order groups)
 
 Accumulate primes in an unknown-order group; supports elegant public updates.
 
@@ -318,6 +381,7 @@ Kemmoe and Lysyanskaya (CCS 2024; IACR ePrint 2024/505) give an RSA-based **dyna
 | Sparse Merkle Tree        | None                     | $O(\log U)$ | $O(\log U)$ hashes | Yes                    | Needs path refresh ($O(\log U)$) | Yes (sparse default)     | Hard (but doable) | Simple, robust, cheap gas per leaf; larger proofs                       |
 | Pairing-based (Nguyen/BB) | Trapdoor $s$ (or SRS)    | $O(1)$      | Few pairings       | **No** (needs manager) | Re-issue each time               | Not native (needs extra) | Non-trivial       | Great on-chain verify; operationally needs a witness server             |
 | KZG set accumulator       | SRS (KZG)                | $O(1)$      | 1–2 pairings       | **No** (needs manager) | Re-issue each time               | **Yes** (Bézout)         | Non-trivial       | Best constant-size with native non-membership; needs server for updates |
+| Verkle (KZG VC tree)     | SRS (KZG)                | $O(\log_b U)$ openings | $\approx h$ pairings    | Yes (tree updates)    | Path-based $O(h)$         | Yes (default openings) | Possible          | Middle ground: shorter than SMT; no witness server; heavier than constant-size |
 | RSA accumulator           | None (but unknown-order) | $O(1)$      | Modexp (costly)    | **Yes** (public)       | **Local $O(1)$** power-up        | **Yes** (Bezout)         | Possible          | Superb client-side UX; on-chain verify heavier than pairings            |
 
 > $U$ = keyspace size (e.g., $2^{256}$).
@@ -325,6 +389,7 @@ Kemmoe and Lysyanskaya (CCS 2024; IACR ePrint 2024/505) give an RSA-based **dyna
 ### High-level guidance
 
 * **If you want minimal on-chain gas per proof and constant sizes:** KZG or pairing-based on BN254 are natural (pairing precompile). But you must operate a **witness update service**.
+* **If you want a middle ground without a witness server:** Verkle trees give shorter proofs than SMTs and don’t require per-append witness re-issuance; on-chain verify scales with path length ($h$ pairings).
 * **If you value self-updating client witnesses and trust-minimal setup:** RSA accumulators shine off chain; on chain, membership verification is heavier.
 * **If you need no ceremonies and easy non-membership with simple infra:** Sparse Merkle Trees are operationally simple, with predictable on-chain costs that grow $\log U$.
 
@@ -406,6 +471,11 @@ Let $n=|S|$ and depth $d=\log U$.
   * Witness size: $O(1)$.
   * Append: needs manager (or special update keys).
   * Verify: membership $1$ pairing; non-membership $2$ pairings.
+* **Verkle (branching factor $b$)**
+
+  * Witness size: $O(h)$ where $h=\lceil\log_b U\rceil$.
+  * Append: $O(h)$ (update $h$ nodes on the path).
+  * Verify: $O(h)$ KZG openings (pairings), with optional batching.
 * **RSA**
 
   * Witness size: $O(1)$.
