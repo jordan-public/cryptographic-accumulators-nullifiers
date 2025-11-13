@@ -71,6 +71,7 @@ For a fixed key domain (e.g., $2^{256}$), define a full binary tree of depth $d$
 * Internal nodes: hash of children; root $R$ is on chain.
 
 **Membership proof** for $e$ is the path of sibling hashes from leaf to root:
+
 $$
 \pi_e=\{h_0,\dots,h_{d-1}\},\quad \text{size } O(\log |\mathcal{U}|).
 $$
