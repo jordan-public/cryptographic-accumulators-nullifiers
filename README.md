@@ -1,7 +1,7 @@
 # Cryptographic Accumulators for ZK Nullifiers (EVM-oriented)
 
-> **Status:** initial draft (README.md).
-> **Scope:** practical, on-chain-verifiable accumulators to implement *nullifiers* in zero-knowledge systems, with an emphasis on Ethereum / EVM.
+> **Draft:**
+> **To do:** Check if any math is broken when language model updated the wording.
 
 ---
 
