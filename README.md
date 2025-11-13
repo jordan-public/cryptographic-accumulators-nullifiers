@@ -67,8 +67,39 @@ Each chapter details math, witness maintenance, (non)membership, and complexity.
 
 For a fixed key domain (e.g., $2^{256}$), define a full binary tree of depth $d$ with default value $\bot$.
 
-* Leaves: at index $i=\mathsf{H}(e)$ store value $v_i$ (e.g., $1$ for “present”).
+* Leaves: at index $i=\mathsf{H}(e)$ store value $v_i$ (e.g., $1$ for "present").
 * Internal nodes: hash of children; root $R$ is on chain.
+
+```mermaid
+graph TD
+    Root["Root R<br/>(on-chain)"]
+    N1["H(N2||N3)"]
+    N2["H(N4||N5)"]
+    N3["H(N6||N7)"]
+    N4["H(leaf||⊥)"]
+    N5["H(leaf||1)"]
+    N6["H(⊥||⊥)"]
+    N7["H(⊥||⊥)"]
+    
+    Root --> N1
+    N1 --> N2
+    N1 --> N3
+    N2 --> N4
+    N2 --> N5
+    N3 --> N6
+    N3 --> N7
+    
+    style Root fill:#e1f5ff
+    style N5 fill:#c8e6c9
+    style N4 fill:#fff9c4
+    style N6 fill:#ffccbc
+    style N7 fill:#ffccbc
+    
+    classDef proof stroke:#ff6b6b,stroke-width:3px
+    class N2,N3 proof
+```
+
+*Diagram: Binary Merkle tree with membership proof path (red outline) showing siblings needed to verify leaf N5.*
 
 **Membership proof** for $e$ is the path of sibling hashes from leaf to root:
 
@@ -112,6 +143,39 @@ These accumulate *linear factors* in the exponent using a secret $s$ at setup.
 ### Setup
 
 Pick secret $s\in\mathbb{F}_p$; publish $(g, g^s)$ (and often $g^{s^i}$ for bounded universes). Encode each element $e$ as a field element.
+
+```mermaid
+graph LR
+    subgraph Setup["Trusted Setup"]
+        S["Secret s ∈ 𝔽ₚ"]
+        G["g, g^s, g^(s²), ..."]
+    end
+    
+    subgraph Accumulator["Accumulator Value"]
+        ACC["Acc(S) = g^∏(s+xᵢ)"]
+    end
+    
+    subgraph Witness["Membership Witness for e"]
+        W["wₑ = g^∏(s+xᵢ), i≠e"]
+    end
+    
+    subgraph Verify["Verification (1 pairing)"]
+        V["e(wₑ, g^(s+e)) ?= e(Acc(S), g)"]
+    end
+    
+    S -.trapdoor.-> G
+    G --> ACC
+    G --> W
+    ACC --> V
+    W --> V
+    
+    style S fill:#ffcccc
+    style ACC fill:#e1f5ff
+    style W fill:#fff9c4
+    style V fill:#c8e6c9
+```
+
+*Diagram: Pairing-based accumulator flow showing trusted setup, constant-size witness, and single-pairing verification.*
 
 ### Accumulator and witnesses
 
@@ -176,6 +240,54 @@ Structured Reference String (SRS) for degree $\ge |S|$:
 $$
 \mathsf{SRS}=\big(g, g^\tau, g^{\tau^2},\ldots\big).
 $$
+
+```mermaid
+graph TB
+    subgraph SRS["Structured Reference String"]
+        T["τ (secret)"]
+        SRS_P["g, g^τ, g^(τ²), ..., g^(τᵈ)"]
+    end
+    
+    subgraph Polynomial["Characteristic Polynomial"]
+        F["f_S(x) = ∏(x - eᵢ) for eᵢ ∈ S"]
+    end
+    
+    subgraph Commit["Accumulator (KZG Commitment)"]
+        C["Acc(S) = C = g^(f_S(τ))"]
+    end
+    
+    subgraph Member["Membership for e ∈ S"]
+        Q["q(x) = f_S(x)/(x-e)"]
+        WM["wₑ = g^(q(τ))"]
+        VM["e(wₑ, g^(τ-e)) ?= e(C, g)"]
+    end
+    
+    subgraph NonMember["Non-membership for y ∉ S (Bézout)"]
+        B["u·f_S + v·(x-y) = 1"]
+        WN["Wᵤ = g^(u(τ)), Wᵥ = g^(v(τ))"]
+        VN["e(Wᵤ,C)·e(Wᵥ,g^(τ-y)) ?= e(g,g)"]
+    end
+    
+    T -.setup.-> SRS_P
+    SRS_P --> F
+    F --> C
+    F --> Q
+    Q --> WM
+    C --> VM
+    WM --> VM
+    
+    F --> B
+    B --> WN
+    C --> VN
+    WN --> VN
+    
+    style T fill:#ffcccc
+    style C fill:#e1f5ff
+    style VM fill:#c8e6c9
+    style VN fill:#c8e6c9
+```
+
+*Diagram: KZG-based accumulator showing both membership (via quotient polynomial) and non-membership (via Bézout relation) proofs.*
 
 ### Accumulator
 
@@ -265,10 +377,53 @@ Verkle trees combine **high-arity trees** with **KZG vector commitments** at eac
 
 ### Construction
 
-- Choose a branching factor $b$ (e.g., $b=256$). Each internal node holds a vector $V\in \mathbb{F}_p^{b}$ of its children’s digests (child commitments or values).
+- Choose a branching factor $b$ (e.g., $b=256$). Each internal node holds a vector $V\in \mathbb{F}_p^{b}$ of its children's digests (child commitments or values).
 - Interpolate the unique polynomial $f\in \mathbb{F}_p[x]$ with $\deg f<b$ such that $f(i)=V_i$ for indices $i\in\{0,\dots,b-1\}$.
 - Commit to the node using KZG: $C= g^{f(\tau)}$. The root commitment is stored on chain.
 - Leaves store application values. For nullifiers, a leaf at index $i=\mathsf{H}(e)$ holds a presence bit (e.g., $1$).
+
+```mermaid
+graph TD
+    subgraph Root["Root Level (depth 0)"]
+        R["C₀ = g^(f₀(τ))<br/>Vector V⁰ = [C₁, C₂, ..., Cᵦ]"]
+    end
+    
+    subgraph Level1["Internal Level (depth 1)"]
+        C1["C₁ = g^(f₁(τ))<br/>V¹ = [C₁₁, ..., C₁ᵦ]"]
+        C2["C₂ = g^(f₂(τ))<br/>V² = [C₂₁, ..., C₂ᵦ]"]
+        Cdots["..."]
+    end
+    
+    subgraph Leaves["Leaf Level (depth h)"]
+        L1["Leaf: value=1<br/>(nullifier present)"]
+        L2["Leaf: value=0<br/>(empty)"]
+        L3["..."]
+    end
+    
+    subgraph Proof["Membership Proof"]
+        P["Path: (i₀, i₁, ..., iₕ₋₁)<br/>For each level k:<br/>• Cₖ (node commitment)<br/>• Wₖ = g^((fₖ(τ)-Vₖ[iₖ])/(τ-iₖ))<br/>• Open Vₖ[iₖ] (child pointer)"]
+    end
+    
+    R --> C1
+    R --> C2
+    R --> Cdots
+    C1 --> L1
+    C1 --> L2
+    C2 --> L3
+    
+    R -.proof path.-> C1
+    C1 -.proof path.-> L1
+    
+    style R fill:#e1f5ff
+    style C1 fill:#fff9c4
+    style L1 fill:#c8e6c9
+    style P fill:#e3f2fd
+    
+    classDef proofPath stroke:#ff6b6b,stroke-width:3px
+    class R,C1,L1 proofPath
+```
+
+*Diagram: Verkle tree with branching factor b, showing KZG vector commitments at each level and a membership proof path (red outline).*
 
 ### Membership proof
 
@@ -336,6 +491,58 @@ Accumulate primes in an unknown-order group; supports elegant public updates.
 * Choose RSA modulus $N$ with unknown factorization; generator $g\in \mathbb{Z}_N^*$.
 * Map elements to primes via hash-to-prime $\mathsf{Hp}:\mathcal{U}\to \text{Primes}$.
 
+```mermaid
+graph TB
+    subgraph Setup["Setup (No Trusted Party)"]
+        N["RSA modulus N<br/>(unknown factorization)"]
+        G["Generator g ∈ ℤ*_N"]
+        HP["Hash-to-prime:<br/>Hp: 𝒰 → Primes"]
+    end
+    
+    subgraph Accumulator["Accumulator Value"]
+        ACC["Acc(S) = g^X mod N<br/>where X = ∏ Hp(eᵢ)"]
+    end
+    
+    subgraph Member["Membership for e ∈ S"]
+        WM["wₑ = g^(X/Hp(e)) mod N"]
+        VM["Verify: wₑ^(Hp(e)) ?≡ Acc(S) mod N"]
+    end
+    
+    subgraph Append["Public Append of y"]
+        PY["p_y = Hp(y)"]
+        UPDATE["Acc' = Acc^(p_y) mod N<br/>wₑ' = wₑ^(p_y) mod N<br/>w_y = Acc"]
+    end
+    
+    subgraph NonMember["Non-membership for y ∉ S"]
+        BEZ["Bézout: a·Hp(y) + b·X = 1"]
+        WNM["d = g^a mod N<br/>Witness: (d, b)"]
+        VNM["Verify: d^(Hp(y))·Acc^b ?≡ g mod N"]
+    end
+    
+    N --> ACC
+    G --> ACC
+    HP --> ACC
+    
+    ACC --> WM
+    WM --> VM
+    
+    ACC --> UPDATE
+    PY --> UPDATE
+    WM --> UPDATE
+    
+    ACC --> BEZ
+    BEZ --> WNM
+    WNM --> VNM
+    
+    style N fill:#e3f2fd
+    style ACC fill:#e1f5ff
+    style UPDATE fill:#c8e6c9
+    style VM fill:#c8e6c9
+    style VNM fill:#c8e6c9
+```
+
+*Diagram: RSA accumulator showing trust-minimal setup, public append capability, and both membership and non-membership proofs.*
+
 ### Accumulator and membership
 
 Let $X=\prod_{e\in S}\mathsf{Hp}(e)$. Define
@@ -401,6 +608,61 @@ $$
 
 ### Off-chain maintenance via a product tree (classic & KL)
 
+```mermaid
+graph TD
+    subgraph Tree["Binary Product Tree"]
+        Root["Root: X = ∏ pᵢ<br/>(all elements)"]
+        L1["∏ p₁..p₄"]
+        R1["∏ p₅..p₈"]
+        L2["p₁·p₂"]
+        R2["p₃·p₄"]
+        L3["p₅·p₆"]
+        R3["p₇·p₈"]
+        E1["p₁=Hp(e₁)"]
+        E2["p₂=Hp(e₂)"]
+        E3["p₃=Hp(e₃)"]
+        E4["p₄=Hp(e₄)"]
+        E5["p₅=Hp(e₅)"]
+        E6["p₆=Hp(e₆)"]
+        E7["p₇=Hp(e₇)"]
+        E8["p₈=Hp(e₈)"]
+    end
+    
+    subgraph Witness["Witness Generation for e₃"]
+        W["X₋₃ = (p₁·p₂)·p₄·(p₅·p₆·p₇·p₈)<br/>w₃ = g^(X₋₃) mod N"]
+        Siblings["Multiply sibling<br/>subtree products:<br/>• p₁·p₂ (sibling)<br/>• p₄ (sibling)<br/>• ∏p₅..p₈ (sibling)"]
+    end
+    
+    Root --> L1
+    Root --> R1
+    L1 --> L2
+    L1 --> R2
+    R1 --> L3
+    R1 --> R3
+    L2 --> E1
+    L2 --> E2
+    R2 --> E3
+    R2 --> E4
+    L3 --> E5
+    L3 --> E6
+    R3 --> E7
+    R3 --> E8
+    
+    L2 -.sibling.-> Siblings
+    E4 -.sibling.-> Siblings
+    R1 -.sibling.-> Siblings
+    Siblings --> W
+    
+    style Root fill:#e1f5ff
+    style E3 fill:#c8e6c9
+    style W fill:#fff9c4
+    
+    classDef siblingPath stroke:#ff6b6b,stroke-width:3px
+    class L2,E4,R1 siblingPath
+```
+
+*Diagram: Binary product tree for efficient RSA witness generation. To compute witness for e₃, multiply sibling subtree products (red outline) along the path.*
+
 Maintain a binary **product tree** over the set, where leaves store per-element exponents and each internal node stores the product of its two children (as big integers):
 
 - **Leaves:**
@@ -435,6 +697,48 @@ Kemmoe and Lysyanskaya (CCS 2024; IACR ePrint 2024/505) give an RSA-based **dyna
 
 ## Summary & Comparisons
 
+```mermaid
+graph TD
+    Start([Choose Accumulator<br/>for ZK Nullifiers])
+    
+    Q1{Need constant-size<br/>proofs?}
+    Q2{Can run witness<br/>update service?}
+    Q3{EVM verify cost<br/>critical?}
+    Q4{Want trust-minimal<br/>setup?}
+    Q5{Want client-side<br/>witness updates?}
+    
+    SMT[Sparse Merkle Tree<br/>✓ No setup<br/>✓ Simple<br/>○ O log U proof]
+    Verkle[Verkle Tree<br/>✓ Shorter than SMT<br/>✓ No witness server<br/>○ O h pairings]
+    KZG[KZG Accumulator<br/>✓ Constant proof<br/>✓ Native non-membership<br/>✗ Needs witness server]
+    Pairing[Pairing-based<br/>✓ Constant proof<br/>✓ Low gas<br/>✗ Needs witness server<br/>✗ Limited non-membership]
+    RSA[RSA Accumulator<br/>✓ Self-updating witnesses<br/>✓ No setup<br/>○ Higher verify gas]
+    
+    Start --> Q1
+    Q1 -->|No| Q4
+    Q1 -->|Yes| Q2
+    
+    Q2 -->|Yes| Q3
+    Q2 -->|No| Q5
+    
+    Q3 -->|Yes| Pairing
+    Q3 -->|Flexible| KZG
+    
+    Q4 -->|Yes| SMT
+    Q4 -->|Flexible| Verkle
+    
+    Q5 -->|Yes| RSA
+    Q5 -->|No| KZG
+    
+    style Start fill:#e3f2fd
+    style SMT fill:#c8e6c9
+    style Verkle fill:#fff9c4
+    style KZG fill:#ffe0b2
+    style Pairing fill:#ffe0b2
+    style RSA fill:#f8bbd0
+```
+
+*Diagram: Decision tree for selecting an accumulator based on requirements and constraints.*
+
 ### Feature matrix (qualitative)
 
 | Accumulator               | Setup trust              | Proof size  | Verify cost (EVM)  | Append (public?)       | Witness upkeep on append         | Non-membership           | Deletions         | Typical fit for ZK nullifiers                                           |
@@ -453,6 +757,47 @@ Kemmoe and Lysyanskaya (CCS 2024; IACR ePrint 2024/505) give an RSA-based **dyna
 * **If you want a middle ground without a witness server:** Verkle trees give shorter proofs than SMTs and don’t require per-append witness re-issuance; on-chain verify scales with path length ($h$ pairings).
 * **If you value self-updating client witnesses and trust-minimal setup:** RSA accumulators shine off chain; on chain, membership verification is heavier.
 * **If you need no ceremonies and easy non-membership with simple infra:** Sparse Merkle Trees are operationally simple, with predictable on-chain costs that grow $\log U$.
+
+---
+
+### Witness Update Patterns
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Contract
+    participant Server
+    
+    Note over User,Server: Pattern 1: Server-Assisted (KZG/Pairing)
+    
+    User->>Contract: Read Acc(S)
+    Contract-->>User: Current accumulator
+    User->>Server: Request witness for e
+    Server->>Server: Compute w_e from current S
+    Server-->>User: Fresh witness w_e
+    User->>Contract: Submit proof with w_e
+    Contract->>Contract: Verify & append nullifier
+    
+    Note over User,Server: Pattern 2: Self-Update (RSA)
+    
+    User->>User: Stored w_e from last use
+    User->>Contract: Query new nullifiers since last
+    Contract-->>User: {y₁, y₂, ...}
+    User->>User: w_e' = w_e^(p₁·p₂·...) mod N
+    User->>Contract: Submit proof with w_e'
+    Contract->>Contract: Verify & append
+    
+    Note over User,Server: Pattern 3: Path Refresh (SMT/Verkle)
+    
+    User->>User: Cached proof π_e
+    User->>Contract: Query updated siblings on path
+    Contract-->>User: New sibling hashes/commitments
+    User->>User: Recompute path proof π_e'
+    User->>Contract: Submit π_e'
+    Contract->>Contract: Verify against root
+```
+
+*Diagram: Three witness update patterns showing how different accumulator types handle witness maintenance.*
 
 ---
 
