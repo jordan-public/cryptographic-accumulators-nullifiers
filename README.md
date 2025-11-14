@@ -232,7 +232,7 @@ $$
 \mathsf{Acc}(S\cup\{y\}) = \mathsf{Acc}(S)^{(s+y)}.
 $$
 
-> **Why public updates are hard here.** The new accumulator is $\mathsf{Acc}(S)^{(s+y)}$. Everyone can raise to a public scalar, but $(s+y)$ is **not public**. Without trapdoor $s$ or extra update material (an updatable SRS that encodes “multiply by $(X\!−\!y)$”), you can’t produce the next digest from the current one.
+> **Why public updates are hard here.** The new accumulator is $\mathsf{Acc}(S)^{(s+y)}$. Everyone can raise to a public scalar, but $(s+y)$ is **not public**. Without trapdoor $s$ or extra update material (an updatable SRS that encodes “multiply by $(X − y)$”), you can’t produce the next digest from the current one.
 
 But exponent $(s+y)$ is *unknown* publicly; thus:
 
@@ -403,7 +403,7 @@ $$
 **Publicly deriving $C'$ from $C$ is *not* possible** without extra SRS material enabling multiplication by $(\tau-y)$. In practice:
 
 * The *aggregator* recomputes $C'$ from coefficients (linear in $\deg f$) or maintains a product tree to keep it quasi-linear.
-* Existing membership witnesses $\mathsf{w}_e$ must be **recomputed** or served as *updateable witnesses* if the system publishes update keys.
+* Existing membership witnesses $\mathsf{w}_e$ must be **recomputed** or served as *updatable witnesses* if the system publishes update keys.
 
 ### Prover state & maintenance
 
@@ -487,7 +487,7 @@ $$
 The verifier checks for each level
 
 $$
- e(W_k,\; g_2^{\tau - i_k}) \stackrel{?}{=} e\!\Big(C_k \cdot (g_1^{V^{(k)}_{i_k}})^{-1},\; g_2\Big),
+ e(W_k,\; g_2^{\tau - i_k}) \stackrel{?}{=} e\Big(C_k \cdot (g_1^{V^{(k)}_{i_k}})^{-1},\; g_2\Big),
 $$
 
 then continues with the child commitment revealed by $V^{(k)}_{i_k}$. At the leaf, it checks that the value equals $1$ (present).
@@ -932,13 +932,13 @@ $$
 Membership:
 
 $$
- e\!\left(g_1^{q_e(\tau)},\ g_2^{\tau-e}\right) \stackrel{?}{=} e\!\left(C,\ g_2\right).
+ e\left(g_1^{q_e(\tau)},\ g_2^{\tau-e}\right) \stackrel{?}{=} e\left(C,\ g_2\right).
 $$
 
 Non-membership (Bézout):
 
 $$
- e\!\left(C,\ g_2^{u(\tau)}\right)\cdot e\!\left(g_1^{v(\tau)},\ g_2^{\tau-y}\right) \stackrel{?}{=} e(g_1,g_2).
+ e\left(C,\ g_2^{u(\tau)}\right)\cdot e\left(g_1^{v(\tau)},\ g_2^{\tau-y}\right) \stackrel{?}{=} e(g_1,g_2).
 $$
 
 ### RSA membership & non-membership
