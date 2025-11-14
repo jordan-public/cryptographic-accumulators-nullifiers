@@ -27,7 +27,7 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 * Let $S \subset \mathcal{U}$ be the current set of nullifiers.
 * An **accumulator value** $\mathsf{Acc}(S)$ is a short digest/commitment stored on chain.
 * A **witness** for $e\in\mathcal{U}$ is denoted $\mathsf{w}_e$.
-* Pairing groups use generators $g_1\in G_1$, $g_2\in G_2$, secret $\tau\in\mathbb{F}_p$, bilinear map $e:G_1\times G_2\to G_T$.
+* Pairing groups use generators $g_1\in G_1$, $g_2\in G_2$ and bilinear map $e:G_1\times G_2\to G_T$.
 * RSA groups use unknown order modulus $N$ and generator $g\in \mathbb{Z}_N^*$.
 * Hashes: $\mathsf{H}(\cdot)$; hash-to-prime $\mathsf{Hp}(\cdot)$ when required.
 * Symbols: we use $\tau$ for KZG SRS and $s$ for the pairing-based trapdoor.
