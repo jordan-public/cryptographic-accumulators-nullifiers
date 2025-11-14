@@ -30,6 +30,7 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 * Pairing groups use generators $g_1\in G_1$, $g_2\in G_2$, secret $\tau\in\mathbb{F}_p$, bilinear map $e:G_1\times G_2\to G_T$.
 * RSA groups use unknown order modulus $N$ and generator $g\in \mathbb{Z}_N^*$.
 * Hashes: $\mathsf{H}(\cdot)$; hash-to-prime $\mathsf{Hp}(\cdot)$ when required.
+* Symbols: we use $\tau$ for KZG SRS and $s$ for the pairing-based trapdoor.
 
 **Type-3 pairing note.** We write equations type-correct for BN254’s asymmetric pairing $e:G_1\times G_2\to G_T$ (a “Type-3” pairing). If you encounter symmetric forms in papers, map them by placing commitments/witnesses in $G_1$ and bases/verification keys in $G_2$, and use $e(\cdot, g_2^{\cdot})$ rather than $e(\cdot, g^{\cdot})$.
 
@@ -232,7 +233,7 @@ $$
 \mathsf{Acc}(S\cup\{y\}) = \mathsf{Acc}(S)^{(s+y)}.
 $$
 
-> **Why public updates are hard here.** The new accumulator is $\mathsf{Acc}(S)^{(s+y)}$. Everyone can raise to a public scalar, but $(s+y)$ is **not public**. Without trapdoor $s$ or extra update material (an updatable SRS that encodes “multiply by $(X − y)$”), you can’t produce the next digest from the current one.
+> **Why public updates are hard here.** The new accumulator is $\mathsf{Acc}(S)^{(s+y)}$. Everyone can raise to a public scalar, but $(s+y)$ is **not public**. Without trapdoor $s$ or extra update material (an updatable SRS that encodes “multiply by $(s + y)$”), you can’t produce the next digest from the current one.
 
 But exponent $(s+y)$ is *unknown* publicly; thus:
 
