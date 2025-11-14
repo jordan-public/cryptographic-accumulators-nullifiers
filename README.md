@@ -819,6 +819,23 @@ graph TD
 - SMT proofs get longer with depth but each step is very cheap; total verify gas is dominated by loop overhead and SLOAD/SSTORE around updates.
 - RSA shines off‑chain (public witness updates). On‑chain verify is materially heavier than pairings but often acceptable for low throughput paths.
 
+### Worked examples (rough end-to-end verify)
+
+> Orientation-level ranges for typical deployments. Measure your own code path in a testnet fork.
+
+| Scenario | Assumptions | Est. on-chain verify gas |
+| --- | --- | --- |
+| **KZG membership** | 1 pairing + small calldata | **~80–90k** |
+| **KZG non-membership** | Bézout; 2 pairings | **~165–180k** |
+| **Pairing-based membership** | 1 pairing | **~80–90k** |
+| **Verkle path** | height **h=4** (b≈256); 1 pairing/level | **~320–360k** |
+| **SMT membership (keccak)** | depth **d=32**; keccak per node + loop | **~200–300k** (lib/impl dependent) |
+| **SMT membership (Poseidon)** | depth **d=32**; Poseidon t=3 | **~120–200k** (param/impl dependent) |
+| **RSA membership** | `modexp` with N≈2048-bit, exp≈256-bit | **~250–450k** |
+| **RSA non-membership** | usually 2× `modexp` | **~500–900k** |
+
+**Caveats.** Solidity control-flow, memory expansion, calldata packing, and batching (multi-pairing / multi-opening) can move these numbers notably. Always benchmark the exact implementation you intend to deploy.
+
 ### High-level guidance
 
 * **If you want minimal on-chain gas per proof and constant sizes:** KZG or pairing-based on BN254 are natural (pairing precompile). But you must operate a **witness update service**.
