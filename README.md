@@ -48,7 +48,7 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 
   * One accumulator word (or a few curve points).
   * Proof sizes: constant or logarithmic.
-  * Verification chores aligned with EVM precompiles (BN254 pairings, keccak/Poseidon, modexp).
+  * Verification chores aligned with EVM precompiles (BN254/alt_bn128 pairings, keccak/Poseidon, modexp).
 * **Witness maintenance**
 
   * Ideally: existing users need not track every update.
@@ -131,7 +131,7 @@ Append $e$ by setting leaf $i$ from $\bot$ to $1$ and re-hashing along the path:
 * **Prover keeps:** either nothing (can query a full node for a proof) or the last proof $\pi_e$.
 * **On addition of any new element:** a previously stored $\pi_e$ may become stale; can be *updated* with $O(\log |\mathcal{U}|)$ sibling replacements or simply re-queried.
 
-### (Non)membership & verification
+### Membership & Non-membership
 
 * **Membership:** verify path recomputation ends at $R$.
 * **Non-membership (sparse):** verify path ends at default leaf at index $\mathsf{H}(e)$.
@@ -241,7 +241,7 @@ But exponent $(s+y)$ is *unknown* publicly; thus:
 * **On each append:** existing $\mathsf{w}_e$ becomes invalid; requires re-issuance or heavy recomputation with secret $s$.
 
 
-### (Non)membership
+### Membership & Non-membership
 
 * **Membership:** supported (constant-size, one pairing).
 * **Non-membership:** *not native.* Universal/non-membership variants exist but require additional structures (e.g., auxiliary accumulators or Bezout-style relations in pairing groups) and typically more parameters.
@@ -258,7 +258,7 @@ $$
  e(W_u,\ \mathsf{Acc}(S))\cdot e(W_v,\ g^{s+y})\cdot e(g,\ -g) \stackrel{?}{=} 1.
 $$
 
-The BN254 pairing precompile checks exactly whether a product of pairings equals 1. Note $g^{s+y}=g^s\cdot g^y$ (since $g^s$ is published in setup, and $g^y$ is public). No explicit element of $G_T$ is needed on chain.
+The BN254 (aka alt_bn128) pairing precompile checks exactly whether a product of pairings equals 1. Note $g^{s+y}=g^s\cdot g^y$ (since $g^s$ is published in setup, and $g^y$ is public). No explicit element of $G_T$ is needed on chain. **Negation is cheap:** in $G_1/G_2$ on BN254, $-P=(x, -y \bmod p)$.
 
 
 * **Witness size:** $O(1)$ group element.
@@ -408,7 +408,7 @@ $$
 * **Prover:** light if served by aggregator; heavy otherwise.
 * **Verifier:** constant pairings (1 for membership; 2 for non-membership as above).
 * **Trust:** updatable/ceremony SRS; standard KZG assumptions.
-* **On-chain:** excellent—BN254 pairing precompile.
+* **On-chain:** excellent—BN254 (aka alt_bn128) pairing precompile.
 
 ---
 
@@ -486,7 +486,7 @@ then continues with the child commitment revealed by $V^{(k)}_{i_k}$. At the lea
 
 ### Non-membership proof
 
-A non-membership proof shows that along the path, at some level $k$, the opened entry is the **default** (empty) value, e.g., $V^{(k)}_{i_k}=0$, using the same KZG opening equation as above; or that the leaf value equals $0$ (absent). Thus non-membership is natively supported via openings to default entries.
+A non-membership proof shows that along the path, at some level $k$, the opened entry is the **default** (empty) value, e.g., $V^{(k)}_{i_k}=0$, using the same KZG opening equation as above; or that the leaf value equals $0$ (absent). Thus non-membership is natively supported via openings to default entries. Pick a unique sentinel for “empty”; don’t reuse any value that could collide with a valid child commitment.
 
 ### Updates
 
@@ -503,7 +503,7 @@ This is **$O(h)$** work; no trapdoor is required. As with Merkle trees, previous
 - **Prover keeps:** optionally the last path proof; otherwise can recompute from the current tree. 
 - **On append:** witnesses touching the updated path become stale; update cost is $O(h)$ (one node per level). No centralized witness-issuer is required.
 
-### (Non)membership & verification
+### Membership & Non-membership
 
 - **Membership:** $h$ KZG evaluation checks (one per level). 
 - **Non-membership:** same structure, proving openings to default values.
@@ -518,7 +518,7 @@ This is **$O(h)$** work; no trapdoor is required. As with Merkle trees, previous
 
 ### EVM notes
 
-- Uses BN254 pairing precompile; proof size and gas grow with tree height.
+- Uses BN254 (aka alt_bn128) pairing precompile; proof size and gas grow with tree height.
 - Proofs are **shorter than SMT** (because $h$ is smaller) and do **not** require a witness update service, but they are **longer/heavier** to verify than constant-size KZG or pairing-based set accumulators.
 > **Practical layout.** Ethereum’s Verkle design often uses *stem/suffix* keys and multi-proofs to amortize openings. If you’ll target L2s/L1s with Verkle, consider documenting your branching factor $b$, indexing function, and whether you bundle openings to reduce pairings.
 
@@ -653,7 +653,7 @@ $$
 ### Prover state & maintenance
 
 * **Prover keeps:** a membership witness $\mathsf{w}_e$ that can be *locally* updated for each append (raise to $p_y$).
-* **Non-membership:** computing $(a,b)$ requires Bezout on $(p,X)$—practical with a *subset-product tree* or server assistance (you need $X$ modulo $p$).
+* **Non-membership:** computing $(a,b)$ requires Bézout on $(p,X)$—practical with a *subset-product tree* or server assistance. The tree makes computing residues like $X\bmod p$ (and membership products $X_{\neg e}$) efficient.
 
 ### Off-chain maintenance via a product tree (classic & KL)
 
@@ -817,6 +817,7 @@ graph TD
 **Tips**
 - Pairings are extremely predictable and batch nicely; prefer them when you can keep proofs constant‑size.
 - SMT proofs get longer with depth but each step is very cheap; total verify gas is dominated by loop overhead and SLOAD/SSTORE around updates.
+- **Calldata:** Pairing/KZG proofs send a few curve points (constant); SMT/Verkle proofs include $O(h)$ siblings/openings — calldata gas grows with path length.
 - RSA shines off‑chain (public witness updates). On‑chain verify is materially heavier than pairings but often acceptable for low throughput paths.
 
 ### Worked examples (rough end-to-end verify)
