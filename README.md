@@ -175,19 +175,19 @@ Pick secret $s\in\mathbb{F}_p$; publish $g_1\in G_1$ and $(g_2, g_2^s)\in G_2$ (
 graph LR
     subgraph Setup["Trusted Setup"]
         S["Secret s ∈ 𝔽ₚ"]
-        G["g1; g2, g2^s, g2^(s²), ..."]
+        G["g_1; g_2, g_2^s, g_2^(s²), ..."]
     end
     
     subgraph Accumulator["Accumulator Value"]
-        ACC["Acc(S) = g1^∏(s+xᵢ)"]
+        ACC["Acc(S) = g_1^∏(s+xᵢ)"]
     end
     
     subgraph Witness["Membership Witness for e"]
-        W["wₑ = g1^∏(s+xᵢ), i≠e"]
+        W["wₑ = g_1^∏(s+xᵢ), i≠e"]
     end
     
     subgraph Verify["Verification (1 pairing)"]
-        V["e(wₑ, g2^(s+e)) ?= e(Acc(S), g2)"]
+        V["e(wₑ, g_2^(s+e)) ?= e(Acc(S), g_2)"]
     end
     
     S -.trapdoor.-> G
@@ -292,7 +292,7 @@ $$
 graph TB
     subgraph SRS["Structured Reference String"]
         T["τ (secret)"]
-        SRS_P["g1, g1^τ, g1^(τ²), ..., g1^(τᵈ); g2, g2^τ"]
+        SRS_P["g_1, g_1^τ, g_1^(τ²), ..., g_1^(τᵈ); g_2, g_2^τ"]
     end
     
     subgraph Polynomial["Characteristic Polynomial"]
@@ -300,19 +300,19 @@ graph TB
     end
     
     subgraph Commit["Accumulator (KZG Commitment)"]
-        C["Acc(S) = C = g1^(f_S(τ))"]
+        C["Acc(S) = C = g_1^(f_S(τ))"]
     end
     
     subgraph Member["Membership for e ∈ S"]
         Q["q(x) = f_S(x)/(x-e)"]
-        WM["wₑ = g1^(q(τ))"]
-        VM["e(wₑ, g2^(τ-e)) ?= e(C, g2)"]
+        WM["wₑ = g_1^(q(τ))"]
+        VM["e(wₑ, g_2^(τ-e)) ?= e(C, g_2)"]
     end
     
     subgraph NonMember["Non-membership for y ∉ S (Bézout)"]
         B["u·f_S + v·(x-y) = 1"]
-        WN["Wᵤ = g1^(u(τ)), Wᵥ = g1^(v(τ))"]
-        VN["e(Wᵤ,C)·e(Wᵥ,g2^(τ-y)) ?= e(g1,g2)"]
+        WN["Wᵤ = g_1^(u(τ)), Wᵥ = g_1^(v(τ))"]
+        VN["e(Wᵤ,C)·e(Wᵥ,g_2^(τ-y)) ?= e(g_1,g_2)"]
     end
     
     T -.setup.-> SRS_P
@@ -434,12 +434,12 @@ Verkle trees combine **high-arity trees** with **KZG vector commitments** at eac
 ```mermaid
 graph TD
     subgraph Root["Root Level (depth 0)"]
-        R["C₀ = g1^(f₀(τ))<br/>Vector V⁰ = [C₁, C₂, ..., Cᵦ]"]
+        R["C₀ = g_1^(f₀(τ))<br/>Vector V⁰ = [C₁, C₂, ..., Cᵦ]"]
     end
     
     subgraph Level1["Internal Level (depth 1)"]
-        C1["C₁ = g1^(f₁(τ))<br/>V¹ = [C₁₁, ..., C₁ᵦ]"]
-        C2["C₂ = g1^(f₂(τ))<br/>V² = [C₂₁, ..., C₂ᵦ]"]
+        C1["C₁ = g_1^(f₁(τ))<br/>V¹ = [C₁₁, ..., C₁ᵦ]"]
+        C2["C₂ = g_1^(f₂(τ))<br/>V² = [C₂₁, ..., C₂ᵦ]"]
         Cdots["..."]
     end
     
@@ -450,7 +450,7 @@ graph TD
     end
     
     subgraph Proof["Membership Proof"]
-        P["Path: (i₀, i₁, ..., iₕ₋₁)<br/>For each level k:<br/>• Cₖ (node commitment)<br/>• Wₖ = g^((fₖ(τ)-Vₖ[iₖ])/(τ-iₖ))<br/>• Open Vₖ[iₖ] (child pointer)"]
+        P["Path: (i₀, i₁, ..., iₕ₋₁)<br/>For each level k:<br/>• Cₖ (node commitment)<br/>• Wₖ = g_1^((fₖ(τ)-Vₖ[iₖ])/(τ-iₖ))<br/>• Open Vₖ[iₖ] (child pointer)"]
     end
     
     R --> C1
@@ -481,7 +481,7 @@ For key $e$, let the path indices be $(i_0, i_1,\dots, i_{h-1})$ where $h=\lceil
 - a KZG evaluation witness
 
 $$
-W_k = g^{\frac{f_k(\tau)-V^{(k)}_{i_k}}{\tau - i_k}}.
+W_k = g_1^{\frac{f_k(\tau)-V^{(k)}_{i_k}}{\tau - i_k}}.
 $$
 
 The verifier checks for each level
@@ -501,7 +501,7 @@ A non-membership proof shows that along the path, at some level $k$, the opened 
 Appending a new nullifier $y$ updates the leaf at index $i=\mathsf{H}(y)$ and the $h$ ancestor nodes on the path. For each affected node, recompute its vector entry and KZG commitment:
 
 $$
-C'_k = g^{f'_k(\tau)}\quad \text{with}\quad f'_k(i_k)=V'^{(k)}_{i_k},\; f'_k(j)=f_k(j)\; \forall j\neq i_k.
+C'_k = g_1^{f'_k(\tau)}\quad \text{with}\quad f'_k(i_k)=V'^{(k)}_{i_k},\; f'_k(j)=f_k(j)\; \forall j\neq i_k.
 $$
 
 This is **$O(h)$** work; no trapdoor is required. As with Merkle trees, previously cached proofs that traverse any changed node become stale and must be refreshed.
