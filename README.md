@@ -135,6 +135,16 @@ Append $e$ by setting leaf $i$ from $\bot$ to $1$ and re-hashing along the path:
 * **Pros:** No trusted setup; easy append; non-membership supported (sparse); gas-predictable (hash loops).
 * **Cons:** Proofs/log gas grow with depth; Poseidon (for ZK) vs Keccak (for EVM) trade-offs.
 
+#### Real‑world note: Tornado.cash mappings & Ethereum’s MPT
+
+Tornado.cash stores nullifiers on chain as a Solidity `mapping(bytes32 => bool)`. **This is still backed by Ethereum’s Merkle‑Patricia Trie (MPT)**: all account storage (including mappings) ultimately lives under the chain’s `stateRoot`. Practically this means:
+
+- Inside the EVM you get **O(1) lookups** by key (slot = `keccak(key || slot)`), but contracts **cannot verify MPT proofs** natively.
+- Off chain (or for light clients / cross‑chain), you can obtain **state proofs** for those mapping entries—as MPT proofs—not short application‑level proofs.
+- This differs from Tornado.cash’s **deposit commitments Merkle tree** (maintained by the app), which is separate from the EVM’s MPT and is used to prove note membership. The **nullifier set** is a mapping (MPT‑backed), used to prevent double spends.
+
+**Takeaway:** an explicit accumulator (SMT/KZG/Verkle/RSA) gives **portable, succinct proofs** tailored to the application, instead of relying on the global MPT proof format that contracts can’t check on chain.
+
 ---
 
 ## 2. Pairing-based accumulators (Nguyen / Boneh–Boyen style)
