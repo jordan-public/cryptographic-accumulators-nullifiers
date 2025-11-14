@@ -798,7 +798,26 @@ graph TD
 | Verkle (KZG VC tree)     | SRS (KZG)                | $O(\log_b U)$ openings | $\approx h$ pairings    | Yes (tree updates)    | Path-based $O(h)$         | Yes (default openings) | Possible          | Middle ground: shorter than SMT; no witness server; heavier than constant-size |
 | RSA accumulator           | None (but unknown-order) | $O(1)$      | Modexp (costly)    | **Yes** (public)       | **Local $O(1)$** power-up        | **Yes** (Bezout)         | Possible          | Superb client-side UX; on-chain verify heavier than pairings            |
 
-> $U$ = keyspace size (e.g., $2^{256}$).
+
+### Gas ballparks (rough, Ethereum L1 / BN254)
+
+> Rule‑of‑thumb numbers to compare orders of magnitude — **not** precise budgets. Real costs vary with calldata size, implementation details, memory expansion, and compiler inlining. Use these to choose the family, then benchmark your specific code path.
+
+| Operation / proof                              | Ballpark gas           | Notes |
+| ---                                            | ---                    | --- |
+| **Pairing check (1 pair)**                     | ~80k                   | EIP‑197 bn128 pairing: ~80k **per pair**; multi‑pair is linear in pairs. |
+| **KZG membership (1 pairing)**                 | ~80k                   | Same as above (1 pairing equation). |
+| **KZG non‑membership (2 pairings)**            | ~160k                  | Bézout check typically uses 2 pairs. |
+| **Verkle path (h KZG openings)**               | ~h·80k                 | One pairing per opened node; e.g. h≈4 → ~320k. |
+| **SMT membership (depth d, keccak)**           | O(d·100–300)           | Keccak256 is cheap (SHA3 opcode 30 + 6 per 32‑byte word); end‑to‑end with loop/branching lands in **tens of thousands** for typical depths. |
+| **Poseidon hash (t=3)**                        | ~3k–6k per hash        | Depends on params/impl; no precompile on L1. |
+| **RSA modexp, membership**                     | ~200k–500k             | `modexp` precompile; N≈2048‑bit, exponent ≈256‑bit (hash‑to‑prime). Highly input‑size dependent. |
+| **RSA modexp, non‑membership**                 | ~400k–1.0M             | Usually ~2 modexp calls + a mul; depends on exact witness relation. |
+
+**Tips**
+- Pairings are extremely predictable and batch nicely; prefer them when you can keep proofs constant‑size.
+- SMT proofs get longer with depth but each step is very cheap; total verify gas is dominated by loop overhead and SLOAD/SSTORE around updates.
+- RSA shines off‑chain (public witness updates). On‑chain verify is materially heavier than pairings but often acceptable for low throughput paths.
 
 ### High-level guidance
 
