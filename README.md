@@ -169,25 +169,25 @@ These accumulate *linear factors* in the exponent using a secret $s$ at setup.
 
 ### Setup
 
-Pick secret $s\in\mathbb{F}_p$; publish $(g, g^s)$ (and often $g^{s^i}$ for bounded universes). Encode each element $e$ as a field element.
+Pick secret $s\in\mathbb{F}_p$; publish $g_1\in G_1$ and $(g_2, g_2^s)\in G_2$ (and often $g_2^{s^i}$ for bounded universes). Encode each element $e$ as a field element.
 
 ```mermaid
 graph LR
     subgraph Setup["Trusted Setup"]
         S["Secret s ∈ 𝔽ₚ"]
-        G["g, g^s, g^(s²), ..."]
+        G["g1; g2, g2^s, g2^(s²), ..."]
     end
     
     subgraph Accumulator["Accumulator Value"]
-        ACC["Acc(S) = g^∏(s+xᵢ)"]
+        ACC["Acc(S) = g1^∏(s+xᵢ)"]
     end
     
     subgraph Witness["Membership Witness for e"]
-        W["wₑ = g^∏(s+xᵢ), i≠e"]
+        W["wₑ = g1^∏(s+xᵢ), i≠e"]
     end
     
     subgraph Verify["Verification (1 pairing)"]
-        V["e(wₑ, g^(s+e)) ?= e(Acc(S), g)"]
+        V["e(wₑ, g2^(s+e)) ?= e(Acc(S), g2)"]
     end
     
     S -.trapdoor.-> G
@@ -209,13 +209,13 @@ graph LR
 Define
 
 $$
-\mathsf{Acc}(S)=g^{\prod_{x\in S} (s+x)}.
+\mathsf{Acc}(S)=g_1^{\prod_{x\in S} (s+x)}.
 $$
 
 For $e\in S$, a membership witness is
 
 $$
-\mathsf{w}_e = g^{\prod_{x\in S\setminus\{e\}} (s+x)}.
+\mathsf{w}_e = g_1^{\prod_{x\in S\setminus\{e\}} (s+x)}.
 $$
 
 **Verification** uses one pairing:
@@ -292,7 +292,7 @@ $$
 graph TB
     subgraph SRS["Structured Reference String"]
         T["τ (secret)"]
-        SRS_P["g, g^τ, g^(τ²), ..., g^(τᵈ)"]
+        SRS_P["g1, g1^τ, g1^(τ²), ..., g1^(τᵈ); g2, g2^τ"]
     end
     
     subgraph Polynomial["Characteristic Polynomial"]
@@ -300,19 +300,19 @@ graph TB
     end
     
     subgraph Commit["Accumulator (KZG Commitment)"]
-        C["Acc(S) = C = g^(f_S(τ))"]
+        C["Acc(S) = C = g1^(f_S(τ))"]
     end
     
     subgraph Member["Membership for e ∈ S"]
         Q["q(x) = f_S(x)/(x-e)"]
-        WM["wₑ = g^(q(τ))"]
-        VM["e(wₑ, g^(τ-e)) ?= e(C, g)"]
+        WM["wₑ = g1^(q(τ))"]
+        VM["e(wₑ, g2^(τ-e)) ?= e(C, g2)"]
     end
     
     subgraph NonMember["Non-membership for y ∉ S (Bézout)"]
         B["u·f_S + v·(x-y) = 1"]
-        WN["Wᵤ = g^(u(τ)), Wᵥ = g^(v(τ))"]
-        VN["e(Wᵤ,C)·e(Wᵥ,g^(τ-y)) ?= e(g,g)"]
+        WN["Wᵤ = g1^(u(τ)), Wᵥ = g1^(v(τ))"]
+        VN["e(Wᵤ,C)·e(Wᵥ,g2^(τ-y)) ?= e(g1,g2)"]
     end
     
     T -.setup.-> SRS_P
@@ -347,7 +347,7 @@ $$
 Commitment
 
 $$
-\mathsf{Acc}(S)=C=g^{f_S(\tau)}.
+\mathsf{Acc}(S)=C=g_1^{f_S(\tau)}.
 $$
 
 ### Membership witness
@@ -361,7 +361,7 @@ $$
 Witness
 
 $$
-\mathsf{w}_e = g^{q_e(\tau)}.
+\mathsf{w}_e = g_1^{q_e(\tau)}.
 $$
 
 **Verify** with one pairing:
@@ -383,7 +383,7 @@ $$
 Publish
 
 $$
-W_u = g^{u(\tau)}, \quad W_v = g^{v(\tau)}.
+W_u = g_1^{u(\tau)}, \quad W_v = g_1^{v(\tau)}.
 $$
 
 **Verify**:
@@ -397,7 +397,7 @@ $$
 Appending $y$ changes $f_{S\cup\{y\}}(x)=f_S(x)(x-y)$ and
 
 $$
-C' = g^{f_S(\tau)(\tau-y)}.
+C' = g_1^{f_S(\tau)\cdot (\tau - y)}.
 $$
 
 **Publicly deriving $C'$ from $C$ is *not* possible** without extra SRS material enabling multiplication by $(\tau-y)$. In practice:
@@ -428,18 +428,18 @@ Verkle trees combine **high-arity trees** with **KZG vector commitments** at eac
 
 - Choose a branching factor $b$ (e.g., $b=256$). Each internal node holds a vector $V\in \mathbb{F}_p^{b}$ of its children's digests (child commitments or values).
 - Interpolate the unique polynomial $f\in \mathbb{F}_p[x]$ with $\deg f<b$ such that $f(i)=V_i$ for indices $i\in\{0,\dots,b-1\}$.
-- Commit to the node using KZG: $C= g^{f(\tau)}$. The root commitment is stored on chain.
+- Commit to the node using KZG: $C= g_1^{f(\tau)}$. The root commitment is stored on chain.
 - Leaves store application values. For nullifiers, a leaf at index $i=\mathsf{H}(e)$ holds a presence bit (e.g., $1$).
 
 ```mermaid
 graph TD
     subgraph Root["Root Level (depth 0)"]
-        R["C₀ = g^(f₀(τ))<br/>Vector V⁰ = [C₁, C₂, ..., Cᵦ]"]
+        R["C₀ = g1^(f₀(τ))<br/>Vector V⁰ = [C₁, C₂, ..., Cᵦ]"]
     end
     
     subgraph Level1["Internal Level (depth 1)"]
-        C1["C₁ = g^(f₁(τ))<br/>V¹ = [C₁₁, ..., C₁ᵦ]"]
-        C2["C₂ = g^(f₂(τ))<br/>V² = [C₂₁, ..., C₂ᵦ]"]
+        C1["C₁ = g1^(f₁(τ))<br/>V¹ = [C₁₁, ..., C₁ᵦ]"]
+        C2["C₂ = g1^(f₂(τ))<br/>V² = [C₂₁, ..., C₂ᵦ]"]
         Cdots["..."]
     end
     
@@ -487,7 +487,7 @@ $$
 The verifier checks for each level
 
 $$
- e(W_k,\; g^{\tau - i_k}) \stackrel{?}{=} e\!\Big(C_k / g^{V^{(k)}_{i_k}},\; g\Big),
+ e(W_k,\; g_2^{\tau - i_k}) \stackrel{?}{=} e\!\Big(C_k \cdot (g_1^{V^{(k)}_{i_k}})^{-1},\; g_2\Big),
 $$
 
 then continues with the child commitment revealed by $V^{(k)}_{i_k}$. At the leaf, it checks that the value equals $1$ (present).
