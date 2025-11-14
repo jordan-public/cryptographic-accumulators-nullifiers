@@ -1,9 +1,10 @@
 # Cryptographic Accumulators for ZK Nullifiers (EVM-oriented)
 
-> **Draft**
+**Draft**
 
-> **To do:** Check if any math is broken when language model updated the wording.
-> **To do:** Reference implementations.
+**To do:**
+- Check if any math is broken when AI updated the wording.
+- Reference implementations.
 
 ---
 
