@@ -32,7 +32,7 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 ### Conventions & encoding
 
 * **Nullifier → field/group element.** When using pairings/KZG, map a 32-byte nullifier into the curve field (e.g., BN254 prime field) with domain separation, or use a collision-resistant injective encoding (reduce-and-reject or hash-to-field). For RSA, use hash-to-prime (classic) or the scheme’s update exponent (KL).
-* **Epoch semantics.** Non-membership is always “at time $t$”. Consider storing an **epoch** counter on chain so proofs can bind to a snapshot.
+* **Epoch semantics.** Non-membership is always “at time $t$”. Consider storing an **epoch** counter on chain so proofs can bind to a snapshot; see [Epoch-based nullifiers & oblivious synchronization](#epoch-sync) for pruning and off-chain incremental unspent proofs.
 * **Domains.** Keep Poseidon/Keccak/KZG domains separated (prefixes), and document the exact byte layout for indices $i=\mathsf{H}(e)$.
 
 ---
@@ -990,6 +990,22 @@ Let $n=|S|$ and depth $d=\log U$.
 
 ---
 
+
+
+
+<a id="epoch-sync"></a>
+## Epoch-based nullifiers & oblivious synchronization (Bowe–Miers, 2025)
+
+**Idea.** Evolve the nullifier per epoch $e$ so that the published nullifier becomes $\eta_e = \mathsf{PRF}(k_{\text{note}},\, \rho \parallel e)$. Validators enforce **uniqueness within the current epoch** (as they already do), while **cross-epoch unspent** is proved off chain via an *oblivious synchronization* service that ingests the public ledger and outputs an **incremental unspent proof** for inclusion in a spend. Services keep only ephemeral per-client state; users can switch providers without linkage. See [8].
+
+**Why this helps.** Validators can **prune** old nullifiers and only store the current-epoch table, removing the linear-growth bottleneck. The incremental proof composes across epochs (e.g., recursively), so wallets need not download historic nullifiers.
+
+**Accumulator tie‑in.** The per‑epoch unspent proof can target any accumulator covered here (SMT/KZG/Verkle/RSA) as a **non‑membership** claim relative to the epoch’s finalized snapshot (anchor). For accumulators that need witness updates (pairing/KZG), the sync service maintains witnesses and produces the incremental proof; for RSA, clients can still self‑update witnesses and obtain only the cross‑epoch unspent proof.
+
+**Privacy caution.** Sync requests should avoid timing linkage across a user’s notes; re‑randomize the incremental proof and avoid correlated update schedules.
+
+**Epoch length & DA layer.** Short epochs improve pruning but push storage off chain. A **data‑availability layer** can store prior‑epoch nullifier databases and operate oblivious sync, decoupled from L1 consensus. Long epochs might be sustained informally (exchanges/wallets), but at scale a dedicated DA layer is advisable. See [8].
+
 ## Final thoughts
 
 No single accumulator dominates across all axes. For *EVM-first, constant-size proofs and low verify gas*, **KZG** (with Bézout non-membership) or **pairing-based** are the front-runners—provided you can operate a reliable witness update channel. For **trust-minimal client UX with self-updating witnesses**, **RSA accumulators** are compelling, trading higher on-chain verify cost for clean off-chain ergonomics. When **simplicity and zero ceremonies** matter most, **Sparse Merkle Trees** remain an excellent baseline.
@@ -1006,3 +1022,5 @@ No single accumulator dominates across all axes. For *EVM-first, constant-size p
 5. A. Kate, G. Zaverucha, I. Goldberg. *Constant-Size Commitments to Polynomials and Their Applications*. ASIACRYPT 2010. (KZG)
 6. A. Bünz, S. Eskandarian, D. Boneh. *Proofs of Liabilities/Reserves* and related set-accumulator techniques (2018–2019 notes/surveys).
 7. V. Y. Kemmoe and A. Lysyanskaya. *RSA-Based Dynamic Accumulator without Hashing into Primes*. CCS 2024; IACR ePrint 2024/505.
+
+8. S. Bowe and I. Miers. *A Note on Notes: Towards Scalable Anonymous Payments via Evolving Nullifiers and Oblivious Synchronization*. Cryptology ePrint Archive, Report 2025/2031 (2025). https://eprint.iacr.org/2025/2031
