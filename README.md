@@ -29,6 +29,8 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 * RSA groups use unknown order modulus $N$ and generator $g\in \mathbb{Z}_N^*$.
 * Hashes: $\mathsf{H}(\cdot)$; hash-to-prime $\mathsf{Hp}(\cdot)$ when required.
 
+**Type-3 pairing note.** We write equations type-correct for BN254’s asymmetric pairing $e:G_1\times G_2\to G_T$ (a “Type-3” pairing). If you encounter symmetric forms in papers, map them by placing commitments/witnesses in $G_1$ and bases/verification keys in $G_2$, and use $e(\cdot, g_2^{\cdot})$ rather than $e(\cdot, g^{\cdot})$.
+
 ### Conventions & encoding
 
 * **Nullifier → field/group element.** When using pairings/KZG, map a 32-byte nullifier into the curve field (e.g., BN254 prime field) with domain separation, or use a collision-resistant injective encoding (reduce-and-reject or hash-to-field). For RSA, use hash-to-prime (classic) or the scheme’s update exponent (KL).
