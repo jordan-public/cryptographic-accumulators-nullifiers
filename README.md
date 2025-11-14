@@ -52,11 +52,17 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 
 ## Families of accumulators covered
 
+
 1. **(Sparse) Merkle Trees (SMT)**
 2. **Pairing-based (Nguyen/Boneh–Boyen-style)**
 3. **KZG-based (polynomial-commitment set accumulators)**
 4. **Verkle Trees (KZG vector-commitment trees)**
 5. **RSA-based (Benaloh–de Mare / Camenisch–Lysyanskaya-style)**
+
+
+### Not covered: Merkle–Patricia Tries (MPT)
+
+Ethereum’s global state is stored in **Merkle–Patricia Tries (MPT)** — a radix/Merkle hybrid authenticated dictionary used for account/storage key–value maps. MPTs are related to Merkle trees but optimized for dynamic maps and path compression. In this paper we **do not analyze MPTs** (construction, proof format, or gas trade‑offs); when we reference Solidity `mapping(...)` storage, we only note that it is **MPT‑backed** at the protocol level, while our analysis focuses on application‑level accumulators (SMT, pairing/KZG, Verkle, RSA).
 
 Each chapter details math, witness maintenance, (non)membership, and complexity.
 
