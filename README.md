@@ -25,7 +25,7 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 * Let $S \subset \mathcal{U}$ be the current set of nullifiers.
 * An **accumulator value** $\mathsf{Acc}(S)$ is a short digest/commitment stored on chain.
 * A **witness** for $e\in\mathcal{U}$ is denoted $\mathsf{w}_e$.
-* Pairing groups use generator $g\in G_1$, secret $\tau\in\mathbb{F}_p$, bilinear map $e:G_1\times G_2\to G_T$.
+* Pairing groups use generators $g_1\in G_1$, $g_2\in G_2$, secret $\tau\in\mathbb{F}_p$, bilinear map $e:G_1\times G_2\to G_T$.
 * RSA groups use unknown order modulus $N$ and generator $g\in \mathbb{Z}_N^*$.
 * Hashes: $\mathsf{H}(\cdot)$; hash-to-prime $\mathsf{Hp}(\cdot)$ when required.
 
@@ -217,7 +217,7 @@ $$
 **Verification** uses one pairing:
 
 $$
- e(\mathsf{w}_e, g^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S), g).
+ e(\mathsf{w}_e, g_2^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S), g_2).
 $$
 
 ### Updates
@@ -250,15 +250,19 @@ But exponent $(s+y)$ is *unknown* publicly; thus:
 
 Some pairing-based variants realize non-membership via a Bézout relation:
 $u(s)\cdot \prod_{x\in S}(s+x) + v(s)\cdot (s+y) = 1$, with witnesses
-$W_u=g^{u(s)}$, $W_v=g^{v(s)}$. The textbook check
-$e(W_u,\ \mathsf{Acc}(S))\cdot e(W_v,\ g^{s+y}) \stackrel{?}{=} e(g,g)$
-can be verified on the EVM **without computing a $G_T$ value** by moving the RHS to the left and using a negated point:
+$W_u=g_1^{u(s)}$, $W_v=g_1^{v(s)}$. A type‑correct EVM check (Type‑3 pairing) is:
 
 $$
- e(W_u,\ \mathsf{Acc}(S))\cdot e(W_v,\ g^{s+y})\cdot e(g,\ -g) \stackrel{?}{=} 1.
+ e(\mathsf{Acc}(S),\ g_2^{u(s)})\cdot e(W_v,\ g_2^{s+y}) \stackrel{?}{=} e(g_1,g_2).
 $$
 
-The BN254 (aka alt_bn128) pairing precompile checks exactly whether a product of pairings equals 1. Note $g^{s+y}=g^s\cdot g^y$ (since $g^s$ is published in setup, and $g^y$ is public). No explicit element of $G_T$ is needed on chain. **Negation is cheap:** in $G_1/G_2$ on BN254, $-P=(x, -y \bmod p)$.
+Equivalently, move the RHS to the left and feed the precompile a product‑equals‑one check:
+
+$$
+ e(\mathsf{Acc}(S),\ g_2^{u(s)})\cdot e(W_v,\ g_2^{s+y})\cdot e(g_1,\ -g_2) \stackrel{?}{=} 1.
+$$
+
+The BN254 (aka alt_bn128) pairing precompile checks exactly whether a product of pairings equals 1. Note $g_2^{s+y}=g_2^s\cdot g_2^y$ (since $g_2^s$ is published in setup, and $g_2^y$ is public). No explicit element of $G_T$ is needed on chain. **Negation is cheap:** in $G_1/G_2$ on BN254, $-P=(x, -y \bmod p)$.
 
 
 * **Witness size:** $O(1)$ group element.
@@ -277,7 +281,7 @@ Use the characteristic polynomial of $S$ with a KZG commitment.
 Structured Reference String (SRS) for degree $\ge |S|$:
 
 $$
-\mathsf{SRS}=\big(g, g^\tau, g^{\tau^2},\ldots\big).
+\mathsf{SRS}=\big(g_1, g_1^\tau, g_1^{\tau^2},\ldots;\; g_2, g_2^\tau\big).
 $$
 
 ```mermaid
@@ -359,7 +363,7 @@ $$
 **Verify** with one pairing:
 
 $$
- e(\mathsf{w}_e, g^{\tau - e}) \stackrel{?}{=} e(C, g).
+ e(\mathsf{w}_e, g_2^{\tau - e}) \stackrel{?}{=} e(C, g_2).
 $$
 
 ### Non-membership witness (Bézout relation)
@@ -381,7 +385,7 @@ $$
 **Verify**:
 
 $$
- e(W_u, C)\cdot e(W_v, g^{\tau - y}) \stackrel{?}{=} e(g, g).
+ e(C,\ g_2^{u(\tau)})\cdot e(g_1^{v(\tau)},\ g_2^{\tau - y}) \stackrel{?}{=} e(g_1, g_2).
 $$
 
 ### Updates
@@ -916,7 +920,7 @@ Accept if $h_d=R$.
 ### Pairing-based membership check
 
 $$
- e(\mathsf{w}_e, g^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S), g).
+ e(\mathsf{w}_e, g_2^{s+e}) \stackrel{?}{=} e(\mathsf{Acc}(S), g_2).
 $$
 
 ### KZG membership & non-membership
@@ -924,13 +928,13 @@ $$
 Membership:
 
 $$
- e\!\left(g^{q_e(\tau)}, g^{\tau-e}\right) \stackrel{?}{=} e\!\left(g^{f_S(\tau)}, g\right).
+ e\!\left(g_1^{q_e(\tau)},\ g_2^{\tau-e}\right) \stackrel{?}{=} e\!\left(C,\ g_2\right).
 $$
 
 Non-membership (Bézout):
 
 $$
- e\!\left(g^{u(\tau)}, g^{f_S(\tau)}\right)\cdot e\!\left(g^{v(\tau)}, g^{\tau-y}\right) \stackrel{?}{=} e(g,g).
+ e\!\left(C,\ g_2^{u(\tau)}\right)\cdot e\!\left(g_1^{v(\tau)},\ g_2^{\tau-y}\right) \stackrel{?}{=} e(g_1,g_2).
 $$
 
 ### RSA membership & non-membership
