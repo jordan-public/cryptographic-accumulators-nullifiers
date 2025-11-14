@@ -29,6 +29,12 @@ An **accumulator** is a short commitment to a (growing) set $S$ that supports sh
 * RSA groups use unknown order modulus $N$ and generator $g\in \mathbb{Z}_N^*$.
 * Hashes: $\mathsf{H}(\cdot)$; hash-to-prime $\mathsf{Hp}(\cdot)$ when required.
 
+### Conventions & encoding
+
+* **Nullifier → field/group element.** When using pairings/KZG, map a 32-byte nullifier into the curve field (e.g., BN254 prime field) with domain separation, or use a collision-resistant injective encoding (reduce-and-reject or hash-to-field). For RSA, use hash-to-prime (classic) or the scheme’s update exponent (KL).
+* **Epoch semantics.** Non-membership is always “at time $t$”. Consider storing an **epoch** counter on chain so proofs can bind to a snapshot.
+* **Domains.** Keep Poseidon/Keccak/KZG domains separated (prefixes), and document the exact byte layout for indices $i=\mathsf{H}(e)$.
+
 ---
 
 ## Requirements for the ZK-Nullifier use case
@@ -222,6 +228,8 @@ $$
 \mathsf{Acc}(S\cup\{y\}) = \mathsf{Acc}(S)^{(s+y)}.
 $$
 
+> **Why public updates are hard here.** The new accumulator is $\mathsf{Acc}(S)^{(s+y)}$. Everyone can raise to a public scalar, but $(s+y)$ is **not public**. Without trapdoor $s$ or extra update material (an updatable SRS that encodes “multiply by $(X\!−\!y)$”), you can’t produce the next digest from the current one.
+
 But exponent $(s+y)$ is *unknown* publicly; thus:
 
 * Without trapdoor access or extra update keys, **public updates are not possible from $\mathsf{Acc}(S)$ alone.**
@@ -355,6 +363,8 @@ $$
 $$
 
 ### Non-membership witness (Bézout relation)
+
+> **Intuition (Bézout over polynomials).** If $y\notin S$, then $\gcd(f_S(x), x-y)=1$. The extended Euclidean algorithm finds polynomials $u,v$ with $u(x)f_S(x)+v(x)(x-y)=1$. Evaluating at $x=\tau$ and committing turns this identity into a pairing equation that the verifier can check.
 
 For $y\notin S$, find polynomials $u(x),v(x)$ with
 
@@ -510,6 +520,7 @@ This is **$O(h)$** work; no trapdoor is required. As with Merkle trees, previous
 
 - Uses BN254 pairing precompile; proof size and gas grow with tree height.
 - Proofs are **shorter than SMT** (because $h$ is smaller) and do **not** require a witness update service, but they are **longer/heavier** to verify than constant-size KZG or pairing-based set accumulators.
+> **Practical layout.** Ethereum’s Verkle design often uses *stem/suffix* keys and multi-proofs to amortize openings. If you’ll target L2s/L1s with Verkle, consider documenting your branching factor $b$, indexing function, and whether you bundle openings to reduce pairings.
 
 ---
 
@@ -521,6 +532,13 @@ Accumulate primes in an unknown-order group; supports elegant public updates.
 
 * Choose RSA modulus $N$ with unknown factorization; generator $g\in \mathbb{Z}_N^*$.
 * Map elements to primes via hash-to-prime $\mathsf{Hp}:\mathcal{U}\to \text{Primes}$.
+
+### Intuition: why RSA accumulators work
+
+* **Unknown order.** In $(\mathbb{Z}/N\mathbb{Z})^*$ you can exponentiate easily, but without $\varphi(N)=(p\!−\!1)(q\!−\!1)$ you **can’t divide exponents** (i.e., extract $p$-th roots) in general. That’s the core “we don’t know where the exponent wraps” intuition.
+* **Security assumption.** The standard statement is the **Strong RSA** assumption: given a random $u$, it’s hard to find $v,e>1$ with $v^e \equiv u \pmod N$. This prevents forging witnesses by taking unauthorized roots.
+* **Why hash-to-prime?** Mapping each element to a prime $p_e$ makes the exponent $X=\prod p_e$ **square-free**, so dividing out a member corresponds to removing exactly one prime factor—well-defined even without $\varphi(N)$.
+* **No-hash-to-prime (KL).** The Kemmoe–Lysyanskaya variant replaces primes with scheme-defined exponents $u_e$, keeping the same append/update ergonomics while changing the non-membership algebra.
 
 ```mermaid
 graph TB
