@@ -543,7 +543,7 @@ Accumulate primes in an unknown-order group; supports elegant public updates.
 
 ### Intuition: why RSA accumulators work
 
-* **Unknown order.** In $(\mathbb{Z}/N\mathbb{Z})^*$ you can exponentiate easily, but without $\varphi(N)=(p\!−\!1)(q\!−\!1)$ you **can’t divide exponents** (i.e., extract $p$-th roots) in general. That’s the core “we don’t know where the exponent wraps” intuition.
+* **Unknown order.** In $(\mathbb{Z}/N\mathbb{Z})^*$ you can exponentiate easily, but without $\varphi(N)=(p-1)(q-1)$ you **can’t divide exponents** (i.e., extract $p$-th roots) in general. That’s the core “we don’t know where the exponent wraps” intuition.
 * **Security assumption.** The standard statement is the **Strong RSA** assumption: given a random $u$, it’s hard to find $v,e>1$ with $v^e \equiv u \pmod N$. This prevents forging witnesses by taking unauthorized roots.
 * **Why hash-to-prime?** Mapping each element to a prime $p_e$ makes the exponent $X=\prod p_e$ **square-free**, so dividing out a member corresponds to removing exactly one prime factor—well-defined even without $\varphi(N)$.
 * **No-hash-to-prime (KL).** The Kemmoe–Lysyanskaya variant replaces primes with scheme-defined exponents $u_e$, keeping the same append/update ergonomics while changing the non-membership algebra.
