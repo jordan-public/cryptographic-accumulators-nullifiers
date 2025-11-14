@@ -732,7 +732,7 @@ This supports efficient maintenance:
 - **From-scratch membership witness** for element $e$: multiply sibling-subtree products along the path to get $X_{\neg e}=\prod_{x\in S\setminus\{e\}}(\cdot)$. Then set
 
   $$
-  \mathsf{w}_e = g^{X_{\neg e}} \\bmod N.
+  \mathsf{w}_e = g^{X_{\neg e}} \bmod N.
   $$
 
   (Works with primes $p_x$ or general exponents $u_x$.)
