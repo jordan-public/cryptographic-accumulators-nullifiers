@@ -155,7 +155,7 @@ Tornado.cash stores nullifiers on chain as a Solidity `mapping(bytes32 => bool)`
 - **Off‑chain or in light‑client contracts**, state proofs for those mapping entries are standard MPT proofs verified against a provided `stateRoot`. On L1 contracts without a light client/oracle, you typically **don’t verify** these proofs.
 - This differs from Tornado.cash’s **deposit commitments Merkle tree** (maintained by the app), which is separate from the EVM’s MPT and is used to prove note membership. The **nullifier set** is a mapping (MPT‑backed), used to prevent double spends.
 
-**Takeaway:** an explicit accumulator (SMT/KZG/Verkle/RSA) gives **portable, succinct proofs** tailored to the application, instead of relying on the global MPT proof format that contracts can’t check on chain.
+**Takeaway:** an explicit accumulator (SMT/KZG/Verkle/RSA) gives **portable, succinct proofs** tailored to the application, instead of relying on the global MPT proof format that contracts **don’t natively verify on L1** (it’s possible with headers + trie/RLP code or a light‑client/oracle, but gas‑heavy and uncommon).
 
 ---
 
