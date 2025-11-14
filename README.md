@@ -216,12 +216,26 @@ But exponent $(s+y)$ is *unknown* publicly; thus:
 * **Prover keeps:** either just $e$ (and fetches a fresh $\mathsf{w}_e$ each time), or the latest $\mathsf{w}_e$.
 * **On each append:** existing $\mathsf{w}_e$ becomes invalid; requires re-issuance or heavy recomputation with secret $s$.
 
+
 ### (Non)membership
 
 * **Membership:** supported (constant-size, one pairing).
 * **Non-membership:** *not native.* Universal/non-membership variants exist but require additional structures (e.g., auxiliary accumulators or Bezout-style relations in pairing groups) and typically more parameters.
 
-### Complexity
+### EVM verification tip (Bézout-style non-membership)
+
+Some pairing-based variants realize non-membership via a Bézout relation:
+$u(s)\cdot \prod_{x\in S}(s+x) + v(s)\cdot (s+y) = 1$, with witnesses
+$W_u=g^{u(s)}$, $W_v=g^{v(s)}$. The textbook check
+$e(W_u,\ \mathsf{Acc}(S))\cdot e(W_v,\ g^{s+y}) \stackrel{?}{=} e(g,g)$
+can be verified on the EVM **without computing a $G_T$ value** by moving the RHS to the left and using a negated point:
+
+$$
+ e(W_u,\ \mathsf{Acc}(S))\cdot e(W_v,\ g^{s+y})\cdot e(g,\ -g) \stackrel{?}{=} 1.
+$$
+
+The BN254 pairing precompile checks exactly whether a product of pairings equals 1. Note $g^{s+y}=g^s\cdot g^y$ (since $g^s$ is published in setup, and $g^y$ is public). No explicit element of $G_T$ is needed on chain.
+
 
 * **Witness size:** $O(1)$ group element.
 * **Prover:** trivial if a manager serves updated witnesses; otherwise impractical (needs $s$).
