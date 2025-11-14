@@ -729,7 +729,7 @@ Maintain a binary **product tree** over the set, where leaves store per-element 
 
 This supports efficient maintenance:
 - **Build / rebuild** the accumulator: compute $A=g^{X} \bmod N$ from the root.
-- **From-scratch membership witness** for element $e$: multiply sibling-subtree products along the path to get $X_{\neg e}=\prod_{x\in S\setminus\{e\}}(\cdot)$. Then set $\mathsf{w}_e = g^{X_{\neg e}} \bmod N$. (Works with primes $p_x$ or general exponents $u_x$.)
+- **From-scratch membership witness** for element $e$: multiply sibling-subtree products along the path to get $X_{\neg e}=\prod_{x\in S\setminus\{e\}}(\cdot)$. Then set $`\mathsf{w}_e = g^{X_{\neg e}} \bmod N`$. (Works with primes $p_x$ or general exponents $u_x$.)
 - **Append $y$** (already public-appendable): update *existing* witnesses locally by powering up with the new leaf exponent: $\mathsf{w}_e \leftarrow \mathsf{w}_e^{p_y}$ in classic RSA, or $\mathsf{w}_e \leftarrow \mathsf{w}_e^{u_y}$ in KL.
 - **Selective refresh:** only witnesses whose path intersects the appended leaf need recomputation from the tree ($O(\log n)$ nodes), rather than touching all nullifiers.
 
