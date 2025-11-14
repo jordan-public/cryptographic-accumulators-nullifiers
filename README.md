@@ -1023,4 +1023,4 @@ No single accumulator dominates across all axes. For *EVM-first, constant-size p
 6. A. Bünz, S. Eskandarian, D. Boneh. *Proofs of Liabilities/Reserves* and related set-accumulator techniques (2018–2019 notes/surveys).
 7. V. Y. Kemmoe and A. Lysyanskaya. *RSA-Based Dynamic Accumulator without Hashing into Primes*. CCS 2024; IACR ePrint 2024/505.
 
-8. S. Bowe and I. Miers. *A Note on Notes: Towards Scalable Anonymous Payments via Evolving Nullifiers and Oblivious Synchronization*. Cryptology ePrint Archive, Report 2025/2031 (2025). https://eprint.iacr.org/2025/2031
+8. S. Bowe and I. Miers. *A Note on Notes: Towards Scalable Anonymous Payments via Evolving Nullifiers and Oblivious Synchronization*. Cryptology ePrint Archive, Report 2025/2031 (2025).
